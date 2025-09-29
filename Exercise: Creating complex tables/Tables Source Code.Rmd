@@ -1,0 +1,132 @@
+---
+title: "NHANES Report"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+# Load required packages
+library(dplyr)
+library(knitr)
+library(kableExtra)
+library(readr)
+
+# Load the cleaned NHANES dataset
+nhanes <- read_csv("cleaned_nhanes.csv")
+
+# Compute average SBP per individual
+nhanes <- nhanes %>%
+  rowwise() %>%
+  mutate(avg_sbp = mean(c(sbp1, sbp2, sbp3, sbp4), na.rm = TRUE)) %>%
+  ungroup()
+```
+
+## Introduction
+
+The National Health and Nutrition Examination Survey (NHANES) is a program designed
+to assess the health and nutritional status of adults and children in the United States.
+It combines interviews and physical examinations.
+In this report, we summarize some key demographic and health characteristics of the cleaned
+NHANES dataset [@nhanes].
+
+## Sample Characteristics
+
+```{r}
+# Overall sample size per wave
+sample_size <- nhanes %>%
+  group_by(wave_id_x) %>%
+  summarise(N = n())
+sample_size <- na.omit(sample_size)
+colnames(sample_size) <- c("Wave", "Count")
+
+sample_size %>%
+  kable(caption = "Overall Sample Size by Wave") %>%
+  kable_styling(full_width = FALSE, position = "center", 
+                bootstrap_options = c("striped", "hover"))
+
+```
+
+
+## Number and percentage of males per wave
+
+```{r}
+gender_table <- nhanes %>%
+  group_by(wave_id_x) %>%
+  summarise(
+    total = n(),
+    males = sum(gender == "Male", na.rm = TRUE),
+    pct_males = round(100 * males / total, 1)
+  )
+
+gender_table <- na.omit(gender_table)
+colnames(gender_table) <- c("Wave", "Total", "Males", "%age_Males")
+
+gender_table %>%
+  kable(caption = "Number and Percentage of Males by Wave") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) %>%
+  column_spec(3, bold = TRUE, color = "white", background = "steelblue")
+```
+
+## Number and percentage of each ethnicity per wave
+
+```{r}
+ethnicity_table <- nhanes %>%
+  group_by(wave_id_x, ethnicity_primary) %>%
+  summarise(N = n()) %>%
+  group_by(wave_id_x) %>%
+  mutate(pct = round(100 * N / sum(N), 1)) %>%
+  ungroup()
+
+ethnicity_table <- na.omit(ethnicity_table)
+colnames(ethnicity_table) <- c("Wave", "Primary Ethnicity", "Count", "%age")
+
+ethnicity_table %>%
+  kable(caption = "Ethnicity Distribution by Wave") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "condensed", "responsive"))
+```
+
+## Summary stats of average SBP per wave
+
+```{r, warning=FALSE, message=FALSE}
+bp_summary <- nhanes %>%
+  group_by(wave_id_x) %>%
+  summarise(
+    Min = round(min(avg_sbp, na.rm = TRUE), 2),
+    Max = round(max(avg_sbp, na.rm = TRUE), 2),
+    Median = round(median(avg_sbp, na.rm = TRUE), 2),
+    Mean = round(mean(avg_sbp, na.rm = TRUE), 2),
+    SD = round(sd(avg_sbp, na.rm = TRUE), 2)
+  )
+
+bp_summary <- na.omit(bp_summary)
+names(bp_summary)[1] <- "Wave"
+
+bp_summary %>%
+  kable(caption = "Summary Statistics of Average Systolic Blood Pressure by Wave") %>%
+  kable_styling(full_width = FALSE, position = "center", 
+                bootstrap_options = c("striped", "hover", "condensed")) %>%
+  row_spec(0, bold = TRUE, background = "#d9edf7")
+
+```
+
+
+## Conclusion
+
+The tables presented highlight key demographic and health indicators from the NHANES dataset.
+These descriptive summaries provide a useful overview of the study sample and health distribution
+across survey waves.
+
+
+
+
+
+
+
+
+
+
+
+
