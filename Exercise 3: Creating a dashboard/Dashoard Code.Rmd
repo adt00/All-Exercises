@@ -1,0 +1,70 @@
+---
+title: "NHANES Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(dplyr)
+library(ggplot2)
+nhanes <- read.csv("cleaned_nhanes.csv")
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Distribution of Age By Gender
+
+```{r, fig.width=15}
+ggplot(nhanes, aes(x = age_years, fill = gender)) +
+  geom_histogram(binwidth = 5, position = "dodge", color = "white") +
+  labs(title = "Age Distribution by Gender",
+       x = "Age (years)", 
+       y = "Number of Participants") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### %age of Individuals Aged 21 or Above
+
+```{r}
+# Calculate percentage of individuals aged 21 or older
+pct_adults <- nhanes %>%
+  summarise(pct = mean(age_years >= 21, na.rm = TRUE) * 100) %>%
+  pull(pct)
+
+gauge(round(pct_adults, 1),
+      min = 0, max = 100, 
+      sectors = gaugeSectors(success = c(70, 100),
+                             warning = c(40, 69),
+                             danger = c(0, 39)),
+      label = "21+ Years")
+```
+
+### Avg. Systolic BP Per Individual
+
+```{r}
+# Calculate average systolic blood pressure per individual
+nhanes <- nhanes %>%
+  rowwise() %>%
+  mutate(avg_sbp = mean(c(sbp1, sbp2, sbp3, sbp4), na.rm = TRUE)) %>%
+  ungroup()
+
+# Percentage of individuals with avg SBP > 120
+pct_high_sbp <- nhanes %>%
+  summarise(pct = mean(avg_sbp > 120, na.rm = TRUE) * 100) %>%
+  pull(pct)
+
+valueBox(
+  value = paste0(round(pct_high_sbp, 1), "%"),
+  caption = "Individuals with Avg SBP > 120 mmHg",
+  color = "purple"
+)
+```
+
